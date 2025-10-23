@@ -115,10 +115,6 @@ const OTHERS_BLOG_QUERY = defineQuery(`*[
   }
 }`);
 
-const TOTAL_REVENUE_QUERY = defineQuery(`sum(*[_type == "order"].totalPrice)`);
-const TOTAL_PRODUCT_COUNT_QUERY = defineQuery(`count(*[_type == "product"])`);
-const TOTAL_BLOG_COUNT_QUERY = defineQuery(`count(*[_type == "blog"])`);
-
 export {
   BRANDS_QUERY,
   LATEST_BLOG_QUERY,
@@ -131,7 +127,4 @@ export {
   SINGLE_BLOG_QUERY,
   BLOG_CATEGORIES,
   OTHERS_BLOG_QUERY,
-  TOTAL_REVENUE_QUERY,
-  TOTAL_PRODUCT_COUNT_QUERY,
-  TOTAL_BLOG_COUNT_QUERY,
 };
