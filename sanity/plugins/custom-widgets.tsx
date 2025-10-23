@@ -70,7 +70,7 @@ export const TotalRevenueWidget: React.FC = () => (
   <StatWidget
     title="Total Revenue"
     query={TOTAL_REVENUE_QUERY.query}
-    formatter={(value) => `Rp ${new Intl.NumberFormat('id-ID').format(value || 0)}`}
+    formatter={(value) => `Rp ${value || 0}`}
   />
 );
 

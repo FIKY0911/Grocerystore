@@ -1,3 +1,5 @@
+"use server"
+
 import { definePlugin } from "sanity";
 import { dashboardTool } from "@sanity/dashboard";
 import { TotalRevenueWidget, TotalProductCountWidget, TotalBlogCountWidget } from './custom-widgets';
