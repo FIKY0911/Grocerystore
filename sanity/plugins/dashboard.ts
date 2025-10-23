@@ -1,11 +1,15 @@
 import { definePlugin } from "sanity";
 import { dashboardTool, projectInfoWidget, projectUsersWidget } from "@sanity/dashboard";
+import { TotalRevenueWidget, TotalProductCountWidget, TotalBlogCountWidget } from './custom-widgets';
 
 export const customDashboard = definePlugin({
   name: "custom-dashboard",
   plugins: [
     dashboardTool({
       widgets: [
+        TotalRevenueWidget(),
+        TotalProductCountWidget(),
+        TotalBlogCountWidget(),
         projectInfoWidget({
           __experimental_before: [],
           data: [
@@ -16,7 +20,7 @@ export const customDashboard = definePlugin({
             },
             {
               title: "Frontend URL",
-              value: "https://yourwebsite.vercel.app", // TODO: Update with actual frontend URL
+              value: "https://grocerystore.vercel.app", // TODO: Update with actual frontend URL
               category: "apps",
             },
           ],
