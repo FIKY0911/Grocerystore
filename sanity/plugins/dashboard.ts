@@ -1,4 +1,4 @@
-"use server"
+"use client"
 
 import { definePlugin } from "sanity";
 import { dashboardTool } from "@sanity/dashboard";
