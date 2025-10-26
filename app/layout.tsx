@@ -3,7 +3,7 @@ import "./globals.css";
 import { Toaster } from "react-hot-toast";
 import type { Metadata } from "next";
 
-export const meta Metadata = {
+export const metadata: Metadata = {
   title: "Grocerystore",
   description: "Grocerystore online terpercaya",
   viewport: "width=device-width, initial-scale=1",
