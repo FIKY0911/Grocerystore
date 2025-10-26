@@ -2,7 +2,7 @@
 "use client";
 
 import useStore from "@/store";
-import { useEffect } from "react";
+import { useEffect, Suspense } from "react";
 import { useSearchParams } from "next/navigation";
 import { motion } from "motion/react";
 import { Check, Home, Package, ShoppingBag } from "lucide-react";
@@ -26,7 +26,7 @@ const getFriendlyStatus = (status: string | null | undefined) => {
   return map[status.toLowerCase()] || status;
 };
 
-const SuccessPage: React.FC<SuccessPageClientProps> = ({ order }) => {
+const SuccessContent: React.FC<SuccessPageClientProps> = ({ order }) => {
   const { resetCart } = useStore();
   const searchParams = useSearchParams();
   const orderNumber = searchParams.get("orderNumber");
@@ -107,6 +107,14 @@ const SuccessPage: React.FC<SuccessPageClientProps> = ({ order }) => {
         </div>
       </motion.div>
     </div>
+  );
+};
+
+const SuccessPage: React.FC<SuccessPageClientProps> = (props) => {
+  return (
+    <Suspense fallback={<div className="min-h-screen flex items-center justify-center">Loading...</div>}>
+      <SuccessContent {...props} />
+    </Suspense>
   );
 };
 
