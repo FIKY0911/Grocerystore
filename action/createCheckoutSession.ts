@@ -122,3 +122,4 @@ export async function createCheckoutSession(
     orderNumber,
     snapToken,
   };
+}
