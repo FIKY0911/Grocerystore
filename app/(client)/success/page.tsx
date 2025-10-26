@@ -1,3 +1,4 @@
+// app/(client)/success/page.tsx
 "use client";
 
 import useStore from "@/store";
@@ -8,7 +9,6 @@ import { Check, Home, Package, ShoppingBag } from "lucide-react";
 import Link from "next/link";
 import { MY_ORDERS_QUERYResult } from "@/sanity.types";
 
-// Client Component
 interface SuccessPageClientProps {
   order: MY_ORDERS_QUERYResult[number] | null;
 }
@@ -26,13 +26,12 @@ const getFriendlyStatus = (status: string | null | undefined) => {
   return map[status.toLowerCase()] || status;
 };
 
-const Success: React.FC<SuccessPageClientProps> = ({ order }) => {
+const SuccessPage: React.FC<SuccessPageClientProps> = ({ order }) => {
   const { resetCart } = useStore();
   const searchParams = useSearchParams();
   const orderNumber = searchParams.get("orderNumber");
 
   useEffect(() => {
-    // Reset cart only if an orderNumber is present, indicating a new successful checkout
     if (orderNumber) {
       resetCart();
     }
@@ -111,3 +110,4 @@ const Success: React.FC<SuccessPageClientProps> = ({ order }) => {
   );
 };
 
+export default SuccessPage;
