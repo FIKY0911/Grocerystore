@@ -1,22 +1,31 @@
-"use client"
+"use client";
 
-import { AlignLeft } from 'lucide-react'
-import React, { useState } from 'react'
-import SideMenu from './SideMenu';
+import { AlignLeft } from "lucide-react";
+import React from "react";
+import SideMenu from "./SideMenu";
 
-const MobileMenu = () => {
-    const [isSidebarOpen, setIsSidebarOpen] = useState(false);
-    return (
-    <>
-        <button aria-label="Open menu" onClick={() => setIsSidebarOpen(!isSidebarOpen)}>
-            <AlignLeft className="hover:text-shop_darkColor hoverEffect md:hidden hover:cursor-pointer"/>
-        </button>
-        <div className="md:hidden">
-            <SideMenu isOpen={isSidebarOpen} onClose={() => setIsSidebarOpen(false)}/>
-        </div>
-
-    </>
-    )
+interface MobileMenuProps {
+  isSidebarOpen: boolean;
+  setIsSidebarOpen: React.Dispatch<React.SetStateAction<boolean>>;
 }
 
-export default MobileMenu
+const MobileMenu: React.FC<MobileMenuProps> = ({
+  isSidebarOpen,
+  setIsSidebarOpen,
+}) => {
+  return (
+    <div className="md:hidden">
+      <button
+        aria-label="Open menu"
+        onClick={() => setIsSidebarOpen(!isSidebarOpen)}
+        className="hover:text-shop_darkColor hoverEffect hover:cursor-pointer"
+      >
+        <AlignLeft />
+      </button>
+
+      <SideMenu isOpen={isSidebarOpen} onClose={() => setIsSidebarOpen(false)} />
+    </div>
+  );
+};
+
+export default MobileMenu;

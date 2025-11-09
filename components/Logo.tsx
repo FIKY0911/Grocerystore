@@ -1,21 +1,29 @@
-import Image from 'next/image'
-import Link from 'next/link'
-import React from 'react'
+import Image from "next/image";
+import Link from "next/link";
+import React from "react";
+import images from "../images/logo/GroceryStore.webp";
 
-const Logo = () => {
+interface LogoProps {
+  className?: string;
+}
+
+const Logo: React.FC<LogoProps> = ({ className }) => {
   return (
-      <Link href="/" className="inline-flex items-center">
-        <div className="overflow-hidden rounded-xl relative h-full w-full"> {/* efek melingkar */}
+    <div className={`flex items-center ${className || ""}`}>
+      <Link href="/" className="flex items-center">
+        <div className="relative w-[175px] h-[58px] flex items-center justify-center">
           <Image
-            src="/logo/GroceryStore.webp" // dari folder public/images/logo
+            src={images}
             alt="Logo"
-            fill // Use fill to make image fill parent
-            className="object-cover transition-transform duration-300 hover:scale-100"
+            width={175}
+            height={58}
+            className="object-contain"
             priority
           />
         </div>
       </Link>
-  )
-}
+    </div>
+  );
+};
 
-export default Logo
+export default Logo;

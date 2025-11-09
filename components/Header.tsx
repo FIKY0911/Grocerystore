@@ -1,46 +1,56 @@
-import React from 'react'
-import Container from './Container';
-import HeaderMenu from './HeaderMenu';
-import Logo from './Logo';
-import CartIcon from './CartIcon';
-import FavoriteButton from './FavoriteButton';
-import MobileMenu from './MobileMenu';
-import { auth, currentUser } from '@clerk/nextjs/server';
-// import { ClerkLoaded, SignedIn, UserButton } from '@clerk/nextjs'; // Removed
-import ClerkAuthButtons from './ClerkAuthButtons'; // New import
-// import SignIn from './SignIn'; // Removed
-import SearchBar from './SearchBar';
-import { getMyOrders } from '@/sanity/queries';
-import Link from 'next/link';
-import { Logs } from 'lucide-react';
+"use client";
 
-const Header = async() => {
-    const user = await currentUser();
-    const { userId } = await auth();
-    let orders = null;
-    if(userId){
-        orders = await getMyOrders(userId);
-    }
+import React, { useState } from "react";
+import Logo from "./Logo";
+import HeaderMenu from "./HeaderMenu";
+import SearchBar from "./SearchBar";
+import CartIcon from "./CartIcon";
+import FavoriteButton from "./FavoriteButton";
+import ClerkAuthButtons from "./ClerkAuthButtons";
+import MobileMenu from "./MobileMenu";
 
-    return (
-            <header className='bg-white/75 py-3.5 sticky top-0 z-50 backdrop-blur-md shadow-sm'>
-                <Container className="flex items-center justify-between text-shop_lightColor">
-                    <div className='w-auto md:w-1/4 flex items-center gap-2.5 justify-start md:gap-0'>
-                        <div className='mt-2 hover:text-shop_lightColor'>
-                            <MobileMenu />
-                        </div>
-                        <Logo />
-                    </div>
-                    <HeaderMenu />
-                    <div className="w-auto md:w-1/5 flex items-center justify-end gap-5">
-                        <SearchBar />
-                        <CartIcon />
-                        <FavoriteButton />
-                        <ClerkAuthButtons ordersLength={orders?.length ? orders?.length : 0} />
-                    </div>
-                </Container>
-            </header>
-        )
-}
+const Header = () => {
+  const [isSidebarOpen, setIsSidebarOpen] = useState(false);
+
+  return (
+    <header className="w-full bg-white shadow-sm sticky top-0 z-50">
+      <div className="max-w-7xl mx-auto flex items-center justify-between px-4 md:px-8 py-3">
+        
+        {/* === KIRI: Logo + MobileMenu === */}
+        <div className="flex items-center gap-3 md:gap-6 pl-2 md:pl-0">
+          {/* Logo hanya tampil di layar md ke atas */}
+          <div
+            className={`transition-all duration-300 hidden md:block ${
+              isSidebarOpen ? "opacity-0 pointer-events-none" : "opacity-100"
+            }`}
+          >
+            <Logo className="flex items-center" />
+          </div>
+
+          {/* MobileMenu tampil hanya di layar kecil */}
+          <div className="block md:hidden">
+            <MobileMenu
+              isSidebarOpen={isSidebarOpen}
+              setIsSidebarOpen={setIsSidebarOpen}
+            />
+          </div>
+        </div>
+
+        {/* === TENGAH: Header Menu (hanya di desktop) === */}
+        <div className="hidden md:flex flex-1 justify-center">
+          <HeaderMenu />
+        </div>
+
+        {/* === KANAN: Search + Favorite + Cart + Clerk === */}
+        <div className="flex items-center justify-end gap-4 md:gap-6">
+          <SearchBar />
+          <FavoriteButton />
+          <CartIcon />
+          <ClerkAuthButtons ordersLength={3} />
+        </div>
+      </div>
+    </header>
+  );
+};
 
 export default Header;
