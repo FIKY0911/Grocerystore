@@ -1,22 +1,31 @@
 import Image from "next/image";
 import Link from "next/link";
 import React from "react";
-import images from "../images/logo/GroceryStore.webp";
+import defaultLogo from "../images/logo/GroceryStore.webp"; // Renamed to avoid conflict with 'src' prop
 
 interface LogoProps {
   className?: string;
+  width?: number;
+  height?: number;
+  alt?: string;
+  src?: string; // Optional prop for custom logo source
 }
 
-const Logo: React.FC<LogoProps> = ({ className }) => {
+const Logo: React.FC<LogoProps> = ({
+  className,
+  width = 185,
+  height = 65,
+  alt = "Grocery Store Logo",
+  src = defaultLogo, // Use defaultLogo if src is not provided
+}) => {
   return (
     <div className={`flex items-center ${className || ""}`}>
       <Link href="/" className="flex items-center">
-        <div className="relative w-[175px] h-[58px] flex items-center justify-center">
+        <div className="relative" style={{ width: `${width}px`, height: `${height}px` }}>
           <Image
-            src={images}
-            alt="Logo"
-            width={175}
-            height={58}
+            src={src}
+            alt={alt}
+            fill // Use fill instead of fixed width/height for better responsiveness
             className="object-contain"
             priority
           />
