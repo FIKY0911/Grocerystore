@@ -1,6 +1,6 @@
 "use client";
 
-import { createCheckoutSession, Metadata } from "@/action/createCheckoutSession";
+import { Metadata, createCheckoutSession } from "@/action/createCheckoutSession";
 import Container from "@/components/Container";
 import EmptyCart from "@/components/EmptyCart";
 import NoAccess from "@/components/NoAccess";
@@ -27,12 +27,12 @@ import { useAuth, useUser } from "@clerk/nextjs";
 import { ShoppingBag, Trash } from "lucide-react";
 import Image from "next/image";
 import Link from "next/link";
-import { useRouter } from "next/navigation"; // Import useRouter
+import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 import toast from "react-hot-toast";
 
 const CartPage = () => {
-  const router = useRouter(); // Initialize useRouter
+  const router = useRouter();
   const {
     deleteCartProduct,
     getTotalPrice,
@@ -58,7 +58,8 @@ const CartPage = () => {
         setSelectedShipper(data[0]);
       }
     } catch (error) {
-      console.log("Shippers fetching error:", error);
+      console.error("Shippers fetching error:", error);
+      toast.error("Gagal mengambil data jasa pengiriman.");
     }
   };
 
@@ -72,30 +73,31 @@ const CartPage = () => {
       if (defaultAddress) {
         setSelectedAddress(defaultAddress);
       } else if (data.length > 0) {
-        setSelectedAddress(data[0]); // Optional: select first address if no default
+        setSelectedAddress(data[0]);
       }
     } catch (error) {
-      console.log("Addresses fetching error:", error);
+      console.error("Addresses fetching error:", error);
+      toast.error("Gagal mengambil data alamat.");
     } finally {
       setLoading(false);
     }
   };
+
   useEffect(() => {
     fetchAddresses();
     fetchShippers();
   }, []);
+
   const handleResetCart = () => {
-    const confirmed = window.confirm(
-      "Are you sure you want to reset your cart?"
-    );
+    const confirmed = window.confirm("Apakah Anda yakin ingin mereset keranjang?");
     if (confirmed) {
       resetCart();
-      toast.success("Cart reset successfully!");
+      toast.success("Keranjang berhasil direset!");
     }
   };
 
   const handleCheckout = async () => {
-    // 🔍 Validasi: pastikan user login & ada alamat
+    // Validasi
     if (!user) {
       toast.error("Silakan login dulu!");
       return;
@@ -112,35 +114,65 @@ const CartPage = () => {
     }
 
     if (groupedItems.length === 0) {
-      toast.error("Keranjangmu kosong!");
+      toast.error("Keranjang Anda kosong!");
       return;
     }
 
     setLoading(true);
     try {
+      // Generate order number
+      const orderNumber = `order_${crypto.randomUUID()}`;
+      
       const metadata: Metadata = {
-        orderNumber: crypto.randomUUID(),
+        orderNumber: orderNumber,
         customerName: user.fullName ?? "Pelanggan",
-        customerEmail: user.emailAddresses?.[0]?.emailAddress ?? "", // Safely access email address
+        customerEmail: user.emailAddresses?.[0]?.emailAddress ?? "",
         clerkUserId: user.id,
         address: selectedAddress,
         shipperId: selectedShipper?._id,
       };
 
-      const { orderNumber, snapToken } = await createCheckoutSession(groupedItems, metadata);
-      if (orderNumber && snapToken) {
-        toast.success("Pesanan berhasil dibuat! Silakan lanjutkan pembayaran di daftar pesanan Anda.");
-        resetCart(); // Clear the cart after successful checkout
-        router.push('/orders'); // Redirect to the orders page
+      console.log('🛒 Cart items:', groupedItems.length);
+      console.log('📦 Cart details:', groupedItems.map(item => ({
+        productId: item.product._id,
+        productName: item.product.name,
+        quantity: item.quantity,
+        price: item.product.price
+      })));
+      console.log('📦 Creating order:', orderNumber);
+
+      // Panggil server action untuk create invoice
+      const { orderNumber: returnedOrderNumber, paymentUrl } = await createCheckoutSession(
+        groupedItems,
+        metadata
+      );
+
+      if (returnedOrderNumber && paymentUrl) {
+        console.log('✅ Order created:', returnedOrderNumber);
+        console.log('💳 Payment URL:', paymentUrl);
+        
+        // Clear cart setelah berhasil create order
+        resetCart();
+        
+        // Show success message
+        toast.success("Pesanan berhasil dibuat!");
+        
+        // Redirect ke success page dengan orderNumber
+        setTimeout(() => {
+          router.push(`/success?orderNumber=${returnedOrderNumber}`);
+        }, 1000);
       } else {
-        toast.error("Gagal mendapatkan detail pembayaran.");
+        toast.error("Gagal mendapatkan payment URL dari Xendit.");
+        console.error('Missing data:', { returnedOrderNumber, paymentUrl });
       }
     } catch (error: any) {
+      console.error("Checkout error:", error);
       toast.error(error.message || "Gagal memulai pembayaran.");
     } finally {
       setLoading(false);
-  }
+    }
   };
+
   return (
     <div className="bg-gray-50 pb-52 md:pb-10">
       {isSignedIn ? (
@@ -154,7 +186,7 @@ const CartPage = () => {
               <div className="grid lg:grid-cols-3 md:gap-8">
                 <div className="lg:col-span-2 rounded-lg">
                   <div className="border bg-white rounded-md">
-                    {groupedItems?.map(({ product }) => {
+                    {groupedItems?.map(({ product, quantity }) => {
                       const itemCount = getItemCount(product?._id);
                       return (
                         <div
@@ -165,8 +197,7 @@ const CartPage = () => {
                             {product?.images && (
                               <Link
                                 href={`/product/${product?.slug?.current}`}
-                                className="border p-0.5 md:p-1 mr-2 rounded-md
-                                 overflow-hidden group"
+                                className="border p-0.5 md:p-1 mr-2 rounded-md overflow-hidden group"
                               >
                                 <Image
                                   src={urlFor(product?.images[0]).url()}
@@ -205,7 +236,7 @@ const CartPage = () => {
                                         className="p-2 rounded-full hover:bg-[#00c600]/10 text-[#00c600] transition-colors"
                                       />
                                     </TooltipTrigger>
-                                    <TooltipContent>Add to Favorites</TooltipContent>
+                                    <TooltipContent>Tambah ke Favorit</TooltipContent>
                                   </Tooltip>
 
                                   <Tooltip>
@@ -213,26 +244,26 @@ const CartPage = () => {
                                       <button
                                         onClick={() => {
                                           deleteCartProduct(product?._id);
-                                          toast.success("Product removed!");
+                                          toast.success("Produk dihapus!");
                                         }}
                                         className="p-2 rounded-full text-[#9f9fa8] hover:bg-[#ff5353]/10 hover:text-[#ff5353] transition-colors"
-                                        aria-label="Remove item"
+                                        aria-label="Hapus item"
                                       >
                                         <Trash size={18} />
                                       </button>
                                     </TooltipTrigger>
-                                    <TooltipContent>Remove item</TooltipContent>
+                                    <TooltipContent>Hapus item</TooltipContent>
                                   </Tooltip>
                                 </TooltipProvider>
                               </div>
-                          </div>
+                            </div>
                           </div>
                           <div className="flex flex-col items-start justify-between h-36 md:h-44 p-0.5 md:p-1">
                             <PriceFormatter
                               amount={(product?.price as number) * itemCount}
                               className="font-bold text-lg"
                             />
-                            <QuantityButtons product={product} />
+                            <QuantityButtons product={product} quantity={quantity} />
                           </div>
                         </div>
                       );
@@ -243,16 +274,16 @@ const CartPage = () => {
                         variant="outline"
                         className="w-full font-medium text-[#ff5353] hover:bg-[#ff5353]/10 border-[#ff5353]/30"
                       >
-                        Clear Cart
+                        Kosongkan Keranjang
                       </Button>
-                  </div>
+                    </div>
                   </div>
                 </div>
                 <div>
                   <div className="lg:col-span-1">
                     <div className="hidden md:inline-block w-full bg-white p-6 rounded-lg border">
                       <h2 className="text-xl font-semibold mb-4">
-                        Order Summary
+                        Ringkasan Pesanan
                       </h2>
                       <div className="space-y-4">
                         <div className="flex items-center justify-between">
@@ -260,7 +291,7 @@ const CartPage = () => {
                           <PriceFormatter amount={getSubTotalPrice()} />
                         </div>
                         <div className="flex items-center justify-between">
-                          <span>Discount</span>
+                          <span>Diskon</span>
                           <PriceFormatter
                             amount={getSubTotalPrice() - getTotalPrice()}
                           />
@@ -279,7 +310,7 @@ const CartPage = () => {
                           disabled={loading}
                           onClick={handleCheckout}
                         >
-                          {loading ? "Please wait..." : "Proceed to Checkout"}
+                          {loading ? "Mohon tunggu..." : "Buat Invoice Pembayaran"}
                         </Button>
                       </div>
                     </div>
@@ -287,18 +318,23 @@ const CartPage = () => {
                       <div className="bg-white rounded-md mt-5">
                         <Card>
                           <CardHeader>
-                            <CardTitle>Delivery Address</CardTitle>
+                            <CardTitle>Alamat Pengiriman</CardTitle>
                           </CardHeader>
                           <CardContent>
                             <RadioGroup
                               defaultValue={addresses
                                 ?.find((addr) => addr.default)
                                 ?._id.toString()}
+                              onValueChange={(value) => {
+                                const address = addresses.find(addr => addr._id.toString() === value);
+                                if (address) {
+                                  setSelectedAddress(address);
+                                }
+                              }}
                             >
                               {addresses?.map((address) => (
                                 <div
                                   key={address?._id}
-                                  onClick={() => setSelectedAddress(address)}
                                   className={`flex items-center space-x-2 mb-4 cursor-pointer ${selectedAddress?._id === address?._id && "text-shop_dark_green"}`}
                                 >
                                   <RadioGroupItem
@@ -306,7 +342,7 @@ const CartPage = () => {
                                   />
                                   <Label
                                     htmlFor={`address-${address?._id}`}
-                                    className="grid gap-1.5 flex-1"
+                                    className="grid gap-1.5 flex-1 cursor-pointer"
                                   >
                                     <span className="font-semibold">
                                       {address?.name}
@@ -321,7 +357,7 @@ const CartPage = () => {
                             </RadioGroup>
                             <Link href="/address">
                               <Button variant="outline" className="w-full mt-4">
-                                Add New Address
+                                Tambah Alamat Baru
                               </Button>
                             </Link>
                           </CardContent>
@@ -332,19 +368,28 @@ const CartPage = () => {
                       <div className="bg-white rounded-md mt-5">
                         <Card>
                           <CardHeader>
-                            <CardTitle>Shipping Service</CardTitle>
+                            <CardTitle>Jasa Pengiriman</CardTitle>
                           </CardHeader>
                           <CardContent>
-                            <RadioGroup defaultValue={shippers?.[0]?._id.toString()}>
+                            <RadioGroup
+                              defaultValue={shippers?.[0]?._id.toString()}
+                              onValueChange={(value) => {
+                                const shipper = shippers.find(shpr => shpr._id.toString() === value);
+                                if (shipper) {
+                                  setSelectedShipper(shipper);
+                                }
+                              }}
+                            >
                               {shippers?.map((shipper) => (
                                 <div
                                   key={shipper?._id}
-                                  onClick={() => setSelectedShipper(shipper)}
-                                  className={`flex items-center space-x-2 mb-4 cursor-pointer ${selectedShipper?._id === shipper?._id && "text-shop_dark_green"}`}>
+                                  className={`flex items-center space-x-2 mb-4 cursor-pointer ${selectedShipper?._id === shipper?._id && "text-shop_dark_green"}`}
+                                >
                                   <RadioGroupItem value={shipper?._id.toString()} />
                                   <Label
                                     htmlFor={`shipper-${shipper?._id}`}
-                                    className="grid gap-1.5 flex-1">
+                                    className="grid gap-1.5 flex-1 cursor-pointer"
+                                  >
                                     <span className="font-semibold">
                                       {shipper?.name}
                                     </span>
@@ -359,26 +404,26 @@ const CartPage = () => {
                   </div>
                 </div>
                 {/* Order summary for mobile view */}
-                <div className="md:hidden fixed bottom-0 left-0 w-full bg-white pt-2">
-                  <div className="bg-white p-4 rounded-lg border mx-4">
-                    <h2>Order Summary</h2>
-                    <div className="space-y-4">
-                      <div className="flex items-center justify-between">
+                <div className="md:hidden fixed bottom-0 left-0 w-full bg-white pt-2 shadow-lg">
+                  <div className="bg-white p-4 rounded-lg border mx-4 mb-4">
+                    <h2 className="font-semibold mb-3">Ringkasan Pesanan</h2>
+                    <div className="space-y-3">
+                      <div className="flex items-center justify-between text-sm">
                         <span>SubTotal</span>
                         <PriceFormatter amount={getSubTotalPrice()} />
                       </div>
-                      <div className="flex items-center justify-between">
-                        <span>Discount</span>
+                      <div className="flex items-center justify-between text-sm">
+                        <span>Diskon</span>
                         <PriceFormatter
                           amount={getSubTotalPrice() - getTotalPrice()}
                         />
                       </div>
                       <Separator />
-                      <div className="flex items-center justify-between font-semibold text-lg">
+                      <div className="flex items-center justify-between font-semibold">
                         <span>Total</span>
                         <PriceFormatter
                           amount={getTotalPrice()}
-                          className="text-lg font-bold text-black"
+                          className="font-bold text-black"
                         />
                       </div>
                       <Button
@@ -387,7 +432,7 @@ const CartPage = () => {
                         disabled={loading}
                         onClick={handleCheckout}
                       >
-                        {loading ? "Please wait..." : "Proceed to Checkout"}
+                        {loading ? "Mohon tunggu..." : "Buat Invoice Pembayaran"}
                       </Button>
                     </div>
                   </div>

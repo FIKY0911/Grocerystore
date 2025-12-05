@@ -18,7 +18,7 @@ export const customDashboard = definePlugin({
             },
             {
               title: "Frontend URL",
-              value: "https://grocerystore.vercel.app", // TODO: Update with actual frontend URL
+              value: "https://grocerystore-rpl-kel13.vercel.app/", // TODO: Update with actual frontend URL
               category: "apps",
             },
           ],

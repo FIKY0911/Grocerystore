@@ -10,12 +10,12 @@ interface UpdateOrderStatusResult {
 export async function updateOrderStatus(
   orderId: string,
   status: string,
-  midtransStatus?: string
+  xenditStatus?: string
 ): Promise<UpdateOrderStatusResult> {
   try {
-    const updateDoc: { status: string; midtransStatus?: string } = { status };
-    if (midtransStatus) {
-      updateDoc.midtransStatus = midtransStatus;
+    const updateDoc: { status: string; xenditStatus?: string } = { status };
+    if (xenditStatus) {
+      updateDoc.xenditStatus = xenditStatus;
     }
 
     await writeClient

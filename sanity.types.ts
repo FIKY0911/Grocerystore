@@ -139,8 +139,8 @@ export type Order = {
   _updatedAt: string;
   _rev: string;
   orderNumber?: string;
-  midtransTransactionId?: string;
-  midtransStatus?: "pending" | "settlement" | "capture" | "deny" | "cancel" | "expire";
+  xenditTransactionId?: string;
+  xenditStatus?: "pending" | "settlement" | "capture" | "deny" | "cancel" | "expire";
   clerkUserId?: string;
   customerName?: string;
   email?: string;
@@ -649,8 +649,8 @@ export type MY_ORDERS_QUERYResult = Array<{
   _updatedAt: string;
   _rev: string;
   orderNumber?: string;
-  midtransTransactionId?: string;
-  midtransStatus?: "cancel" | "capture" | "deny" | "expire" | "pending" | "settlement";
+  xenditTransactionId?: string;
+  xenditStatus?: "cancel" | "capture" | "deny" | "expire" | "pending" | "settlement";
   clerkUserId?: string;
   customerName?: string;
   email?: string;
@@ -728,7 +728,7 @@ export type ORDER_BY_ID_QUERYResult = {
   customerName: string | null;
   email: string | null;
   status: "cancelled" | "delivered" | "paid" | "pending" | "processing" | "shipped" | null;
-  midtransStatus: "cancel" | "capture" | "deny" | "expire" | "pending" | "settlement" | null;
+  xenditStatus: "cancel" | "capture" | "deny" | "expire" | "pending" | "settlement" | null;
   totalPrice: number | null;
   orderDate: string | null;
   address: {
@@ -959,7 +959,7 @@ declare module "@sanity/client" {
     "*[_type == \"product\" && slug.current == $slug] | order(name asc) [0]": PRODUCT_BY_SLUG_QUERYResult;
     "*[_type == \"product\" && slug.current == $slug]{\n  \"brandName\": brand->title\n  }": BRAND_QUERYResult;
     "*[_type == 'order' && clerkUserId == $userId] | order(orderDate desc){\n...,products[]{\n  ...,product->\n}\n}": MY_ORDERS_QUERYResult;
-    "*[_type == \"order\" && orderNumber == $orderNumber][0] {\n  _id,\n  orderNumber,\n  customerName,\n  email,\n  status,\n  midtransStatus,\n  totalPrice,\n  orderDate,\n  address,\n  \"productDetails\": products[] {\n    quantity,\n    priceAtPurchase,\n    product->{\n      _id,\n      name,\n      images,\n      \"slug\": slug.current\n    }\n  }\n}": ORDER_BY_ID_QUERYResult;
+    "*[_type == \"order\" && orderNumber == $orderNumber][0] {\n  _id,\n  orderNumber,\n  customerName,\n  email,\n  status,\n  xenditStatus,\n  totalPrice,\n  orderDate,\n  address,\n  \"productDetails\": products[] {\n    quantity,\n    priceAtPurchase,\n    product->{\n      _id,\n      name,\n      images,\n      \"slug\": slug.current\n    }\n  }\n}": ORDER_BY_ID_QUERYResult;
     "*[_type == 'blog'] | order(publishedAt desc)[0...$quantity]{\n  ...,  \n     blogcategories[]->{\n    title\n}\n    }\n  ": GET_ALL_BLOGResult;
     "*[_type == \"blog\" && slug.current == $slug][0]{\n  ..., \n    author->{\n    name,\n    image,\n  },\n  blogcategories[]->{\n    title,\n    \"slug\": slug.current,\n  },\n}": SINGLE_BLOG_QUERYResult;
     "*[_type == \"blog\"]{\n     blogcategories[]->{\n    ...\n    }\n  }": BLOG_CATEGORIESResult;

@@ -1,6 +1,6 @@
 import { create } from "zustand";
 import { persist } from "zustand/middleware";
-import { Product } from "./sanity.types";
+import { MY_ORDERS_QUERYResult, Product } from "./sanity.types";
 
 export interface CartItem {
   product: Product;
@@ -22,6 +22,11 @@ interface StoreState {
   addToFavorite: (product: Product) => Promise<void>;
   removeFromFavorite: (productId: string) => void;
   resetFavorite: () => void;
+
+  // orders
+  orders: MY_ORDERS_QUERYResult;
+  setOrders: (orders: MY_ORDERS_QUERYResult) => void;
+  removeOrder: (orderId: string) => void;
 }
 
 const useStore = create<StoreState>()(
@@ -29,6 +34,12 @@ const useStore = create<StoreState>()(
     (set, get) => ({
       items: [],
       favoriteProduct: [],
+      orders: [],
+      setOrders: (orders) => set({ orders }),
+      removeOrder: (orderId) =>
+        set((state) => ({
+          orders: state.orders.filter((order) => order._id !== orderId),
+        })),
       addItem: (product) =>
         set((state) => {
           const existingItem = state.items.find(

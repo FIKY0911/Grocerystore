@@ -4,211 +4,132 @@ import { defineArrayMember, defineField, defineType } from "sanity";
 
 export const orderType = defineType({
   name: "order",
-  title: "Order",
   type: "document",
+  title: "Order",
   icon: BasketIcon,
   fields: [
     defineField({
       name: "orderNumber",
+      type: "string",
       title: "Order Number",
-      type: "string",
       validation: (Rule) => Rule.required(),
-    }),
-    // 🔁 Midtrans Integration
-    defineField({
-      name: "midtransTransactionId",
-      title: "Midtrans Transaction ID",
-      type: "string",
-    }),
-    defineField({
-      name: "midtransStatus",
-      title: "Midtrans Payment Status",
-      type: "string",
-      options: {
-        list: [
-          { title: "Pending", value: "pending" },
-          { title: "Settlement", value: "settlement" },
-          { title: "Capture", value: "capture" },
-          { title: "Deny", value: "deny" },
-          { title: "Cancel", value: "cancel" },
-          { title: "Expire", value: "expire" },
-          { title: "Lunas", value: "paid" },
-        ],
-      },
     }),
     defineField({
       name: "clerkUserId",
-      title: "Clerk User ID",
       type: "string",
+      title: "Clerk User ID",
       validation: (Rule) => Rule.required(),
     }),
     defineField({
       name: "customerName",
-      title: "Customer Name",
       type: "string",
+      title: "Customer Name",
       validation: (Rule) => Rule.required(),
     }),
     defineField({
       name: "email",
-      title: "Customer Email",
       type: "string",
+      title: "Email",
       validation: (Rule) => Rule.required().email(),
     }),
-    // 📦 Produk
     defineField({
       name: "products",
-      title: "Products",
       type: "array",
+      title: "Products",
       of: [
         defineArrayMember({
           type: "object",
+          name: "orderProduct",
+          title: "Order Product",
           fields: [
             defineField({
               name: "product",
-              title: "Product Bought",
               type: "reference",
               to: [{ type: "product" }],
+              title: "Product",
+              validation: (Rule) => Rule.required(),
             }),
             defineField({
               name: "quantity",
-              title: "Quantity Purchased",
               type: "number",
+              title: "Quantity",
               validation: (Rule) => Rule.required().min(1),
             }),
             defineField({
               name: "priceAtPurchase",
-              title: "Price at Purchase",
               type: "number",
+              title: "Price at Purchase",
               validation: (Rule) => Rule.required().min(0),
             }),
           ],
           preview: {
             select: {
-              product: "product.name",
+              productName: "product.name",
               quantity: "quantity",
-              image: "product.images.0",
               price: "priceAtPurchase",
             },
-            prepare(select) {
+            prepare({ productName, quantity, price }) {
               return {
-                title: `${select.product} x ${select.quantity}`,
-                subtitle: `IDR ${(select.price * select.quantity).toLocaleString()}`,
-                media: select.image,
+                title: productName || "Unknown Product",
+                subtitle: `Qty: ${quantity} × Rp ${price?.toLocaleString("id-ID") || 0} = Rp ${((quantity || 0) * (price || 0)).toLocaleString("id-ID")}`,
               };
             },
           },
         }),
       ],
-      validation: (Rule) => Rule.required().min(1),
     }),
-    // 💰 Harga
-    defineField({
-      name: "totalPrice",
-      title: "Total Price",
-      type: "number",
-      validation: (Rule) => Rule.required().min(0),
-    }),
-    defineField({
-      name: "currency",
-      title: "Currency",
-      type: "string",
-      initialValue: "IDR",
-    }),
-    defineField({
-      name: "amountDiscount",
-      title: "Amount Discount",
-      type: "number",
-      initialValue: 0,
-    }),
-    // 📍 Alamat Pengiriman (REFERENSI ke dokumen address)
     defineField({
       name: "address",
-      title: "Shipping Address",
       type: "reference",
       to: [{ type: "address" }],
+      title: "Shipping Address",
       validation: (Rule) => Rule.required(),
     }),
-    // 🚚 Jasa Pengiriman
     defineField({
       name: "shipper",
-      title: "Jasa Pengiriman",
       type: "reference",
       to: [{ type: "shipper" }],
+      title: "Shipping Service",
       validation: (Rule) => Rule.required(),
     }),
-    // 📊 Status
     defineField({
       name: "status",
-      title: "Order Status",
       type: "string",
+      title: "Status",
       initialValue: "pending",
       options: {
         list: [
-          { title: "Menunggu Pembayaran", value: "pending" },
-          { title: "Diproses", value: "processing" },
-          { title: "Lunas", value: "paid" },
-          { title: "Dikirim", value: "shipped" },
-          { title: "Diterima", value: "delivered" },
-          { title: "Dibatalkan", value: "cancelled" },
+          { title: "Pending", value: "pending" },
+          { title: "Paid", value: "paid" },
+          { title: "Cancelled", value: "cancelled" },
         ],
       },
+      validation: (Rule) => Rule.required(),
     }),
     defineField({
       name: "orderDate",
-      title: "Order Date",
       type: "datetime",
+      title: "Order Date",
       initialValue: () => new Date().toISOString(),
+      validation: (Rule) => Rule.required(),
     }),
     defineField({
-      name: "invoice",
-      title: "Invoice Details",
-      type: "object",
-      fields: [
-        defineField({
-          name: "id",
-          title: "Invoice ID",
-          type: "string",
-        }),
-        defineField({
-          name: "number",
-          title: "Invoice Number",
-          type: "string",
-        }),
-        defineField({
-          name: "hosted_invoice_url",
-          title: "Hosted Invoice URL",
-          type: "url",
-        }),
-      ],
+      name: "totalPrice",
+      type: "number",
+      title: "Total Price",
+      validation: (Rule) => Rule.required().min(0),
     }),
     defineField({
       name: "paymentUrl",
-      title: "Midtrans Payment URL",
-      type: "url",
+      type: "string",
+      title: "Payment URL",
     }),
     defineField({
-      name: "snapToken",
-      title: "Midtrans Snap Token",
-      type: "string",
+      name: "stockReduced",
+      type: "boolean",
+      title: "Stock Reduced",
+      description: "Indicates if stock has been reduced for this order",
+      initialValue: false,
     }),
   ],
-  preview: {
-    select: {
-      name: "customerName",
-      amount: "totalPrice",
-      orderId: "orderNumber",
-      status: "status",
-      addressName: "address.name",
-    },
-    prepare(select) {
-      const orderIdSnippet = select.orderId
-        ? `${select.orderId.slice(0, 5)}...${select.orderId.slice(-5)}`
-        : "N/A";
-      return {
-        title: `${select.name} (${orderIdSnippet})`,
-        subtitle: `IDR ${select.amount?.toLocaleString()} • ${select.status || "pending"} • ${select.addressName || "Alamat"}`,
-        media: BasketIcon,
-      };
-    },
-  },
 });

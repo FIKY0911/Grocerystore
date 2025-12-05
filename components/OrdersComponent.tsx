@@ -11,19 +11,12 @@ import {
 import PriceFormatter from "./PriceFormatter";
 import { format } from "date-fns";
 import { X } from "lucide-react";
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import toast from "react-hot-toast";
 import OrderDetailDialog from "./OrderDetailDialog";
 import { deleteOrder } from "@/action/deleteOrder";
-import { updateOrderStatus } from "@/action/updateOrderStatus";
 import { Button } from "./ui/button";
-import Script from "next/script";
-
-declare global {
-  interface Window {
-    snap: any;
-  }
-}
+import useStore from "@/store";
 
 // Fungsi bantu: dapatkan kelas warna berdasarkan status
 const getStatusBadgeClass = (status: string | null | undefined) => {
@@ -31,15 +24,11 @@ const getStatusBadgeClass = (status: string | null | undefined) => {
 
   switch (status.toLowerCase()) {
     case "paid":
-    case "settlement":
-    case "capture":
       return "bg-green-100 text-green-800";
     case "pending":
       return "bg-yellow-100 text-yellow-800";
     case "cancelled":
-    case "cancel":
-    case "deny":
-    case "expire":
+    case "failed":
       return "bg-red-100 text-red-800";
     case "processing":
     case "shipped":
@@ -61,21 +50,20 @@ const getFriendlyStatus = (status: string | null | undefined) => {
     processing: "Diproses",
     shipped: "Dikirim",
     delivered: "Diterima",
-    settlement: "Lunas (Midtrans)",
-    capture: "Dibayar (Capture)",
-    deny: "Ditolak",
-    cancel: "Dibatalkan",
-    expire: "Kedaluwarsa",
+    failed: "Gagal",
   };
 
-  return map[status.toLowerCase()] || status.charAt(0).toUpperCase() + status.slice(1);
+  return (
+    map[status.toLowerCase()] ||
+    status.charAt(0).toUpperCase() + status.slice(1)
+  );
 };
 
 const OrdersComponent = ({ orders }: { orders: MY_ORDERS_QUERYResult }) => {
   const [selectedOrder, setSelectedOrder] = useState<
     MY_ORDERS_QUERYResult[number] | null
   >(null);
-  const [showMidtransScript, setShowMidtransScript] = useState(false);
+  const { removeOrder } = useStore();
 
   const handleDelete = async (orderId: string) => {
     if (window.confirm("Apakah Anda yakin ingin menghapus pesanan ini?")) {
@@ -83,6 +71,7 @@ const OrdersComponent = ({ orders }: { orders: MY_ORDERS_QUERYResult }) => {
         const result = await deleteOrder(orderId);
         if (result.success) {
           toast.success(result.message);
+          removeOrder(orderId);
         } else {
           toast.error(result.message);
         }
@@ -93,53 +82,17 @@ const OrdersComponent = ({ orders }: { orders: MY_ORDERS_QUERYResult }) => {
     }
   };
 
-  const handlePay = async (order: MY_ORDERS_QUERYResult[number]) => {
-    if (!order.snapToken) {
-      toast.error("Snap token tidak ditemukan untuk pesanan ini.");
+  const handlePay = (order: MY_ORDERS_QUERYResult[number]) => {
+    if (!order.paymentUrl) {
+      toast.error("URL pembayaran tidak ditemukan untuk pesanan ini.");
       return;
     }
-
-    setShowMidtransScript(true);
-
-    // Ensure Midtrans Snap script is loaded before proceeding
-    const checkMidtrans = setInterval(() => {
-      if (window.snap) {
-        clearInterval(checkMidtrans);
-        window.snap.pay(order.snapToken, {
-          onSuccess: async function (result: any) {
-            toast.success("Pembayaran berhasil!");
-            await updateOrderStatus(order._id!, "paid", result.transaction_status);
-            // Optionally refresh the page or re-fetch orders
-            window.location.reload();
-          },
-          onPending: async function (result: any) {
-            toast("Pembayaran Anda tertunda.");
-            await updateOrderStatus(order._id!, "pending", result.transaction_status);
-            window.location.reload();
-          },
-          onError: async function (result: any) {
-            toast.error("Pembayaran gagal.");
-            await updateOrderStatus(order._id!, "failed", result.transaction_status);
-            window.location.reload();
-          },
-          onClose: function () {
-            /* You may add your own implementation here */
-            toast("Anda menutup pop-up pembayaran tanpa menyelesaikan transaksi.");
-          },
-        });
-      }
-    }, 100);
+    // Redirect user to the payment URL
+    window.location.href = order.paymentUrl;
   };
 
   return (
     <>
-      {showMidtransScript && (
-        <Script
-          src="https://app.sandbox.midtrans.com/snap/snap.js"
-          data-client-key={process.env.NEXT_PUBLIC_MIDTRANS_CLIENT_KEY}
-          strategy="afterInteractive"
-        />
-      )}
       <TableBody>
         <TooltipProvider>
           {orders.map((order) => (
@@ -171,25 +124,19 @@ const OrdersComponent = ({ orders }: { orders: MY_ORDERS_QUERYResult }) => {
                   <TableCell>
                     {/* Status Utama */}
                     <div className="flex flex-col gap-1">
-                      <span className={`px-2 py-1 rounded-full text-xs font-semibold ${getStatusBadgeClass(order?.status)}`}>
+                      <span
+                        className={`px-2 py-1 rounded-full text-xs font-semibold ${getStatusBadgeClass(order?.status)}`}
+                      >
                         {getFriendlyStatus(order?.status)}
                       </span>
-                      {/* Status Midtrans (opsional) */}
-                      {order?.midtransStatus && (
-                        <span className="text-[10px] text-gray-500 mt-0.5">
-                          Midtrans: {order.midtransStatus}
-                        </span>
-                      )}
                     </div>
                   </TableCell>
 
                   <TableCell className="hidden sm:table-cell">
                     {order?.invoice ? order.invoice.number : "—"}
                   </TableCell>
-                  <TableCell
-                    className="flex items-center justify-center gap-2"
-                  >
-                    {order.status === "pending" && order.snapToken && (
+                  <TableCell className="flex items-center justify-center gap-2">
+                    {order.status === "pending" && order.paymentUrl && (
                       <Button
                         onClick={(e) => {
                           e.stopPropagation();
@@ -233,7 +180,4 @@ const OrdersComponent = ({ orders }: { orders: MY_ORDERS_QUERYResult }) => {
   );
 };
 
-
-
 export default OrdersComponent;
-

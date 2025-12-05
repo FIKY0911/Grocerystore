@@ -68,13 +68,24 @@ export const addressType = defineType({
       description: "Alamat jalan lengkap dengan nomor rumah/blok",
       validation: (Rule) => Rule.required().min(5).max(200),
     }),
-    // schemas/order.ts
     defineField({
-      name: "shipper",
-      title: "Jasa Pengiriman",
-      type: "reference",
-      to: [{ type: "shipper" }],
-      validation: (Rule) => Rule.required(),
+      name: "phone",
+      title: "Nomor Telepon",
+      type: "string",
+      description: "Nomor telepon penerima (contoh: 081234567890)",
+      validation: (Rule) =>
+        Rule.required()
+          .regex(/^(\+62|62|0)[0-9]{9,12}$/, {
+            name: "phoneNumber",
+            invert: false,
+          })
+          .custom((phone: string | undefined) => {
+            if (!phone) return "Nomor telepon wajib diisi";
+            if (!/^(\+62|62|0)[0-9]{9,12}$/.test(phone)) {
+              return "Format nomor telepon tidak valid (contoh: 081234567890)";
+            }
+            return true;
+          }),
     }),
     defineField({
       name: "city",

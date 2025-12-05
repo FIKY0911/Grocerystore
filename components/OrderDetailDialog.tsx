@@ -15,16 +15,6 @@ import Image from "next/image";
 import { urlFor } from "@/sanity/lib/image";
 import PriceFormatter from "./PriceFormatter";
 
-interface MidtransSnap {
-  pay: (token: string) => void;
-}
-
-declare global {
-  interface Window {
-    snap: MidtransSnap;
-  }
-}
-
 interface OrderDetailsDialogProps {
   order: MY_ORDERS_QUERYResult[number] | null;
   isOpen: boolean;
@@ -52,35 +42,6 @@ const OrderDetailDialog: React.FC<OrderDetailsDialogProps> = ({
 }) => {
   if (!order) return null;
 
-  const handlePay = () => {
-    if (order.snapToken && window.snap) {
-      window.snap.pay(order.snapToken, {
-        onSuccess: function(result: any){
-          /* You may add your own implementation here */
-          alert("payment success!"); console.log(result);
-          onClose(); // Close dialog on success
-          // Optionally, refresh the page or order list to show updated status
-          window.location.reload();
-        },
-        onPending: function(result: any){
-          /* You may add your own implementation here */
-          alert("wating your payment!"); console.log(result);
-          onClose(); // Close dialog on pending
-        },
-        onError: function(result: any){
-          /* You may add your own implementation here */
-          alert("payment failed!"); console.log(result);
-        },
-        onClose: function(){
-          /* You may add your own implementation here */
-          alert('you closed the popup without finishing the payment');
-        }
-      });
-    } else {
-      alert("Snap token not available or Midtrans Snap.js not loaded.");
-    }
-  };
-
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
       <DialogContent className="!max-w-4xl max-h-[90vh] overflow-y-auto">
@@ -106,14 +67,14 @@ const OrderDetailDialog: React.FC<OrderDetailsDialogProps> = ({
               </span>
             </p>
 
-            {order.midtransTransactionId && (
+            {order.xenditTransactionId && (
               <p className="text-sm text-gray-600 mt-1">
-                <strong>ID Transaksi Midtrans:</strong> {order.midtransTransactionId}
+                <strong>ID Transaksi Xendit:</strong> {order.xenditTransactionId}
               </p>
             )}
-            {order.midtransStatus && (
+            {order.xenditStatus && (
               <p className="text-sm text-gray-600">
-                <strong>Status Midtrans:</strong> {order.midtransStatus}
+                <strong>Status Xendit:</strong> {order.xenditStatus}
               </p>
             )}
           </div>
@@ -140,15 +101,6 @@ const OrderDetailDialog: React.FC<OrderDetailsDialogProps> = ({
               <Link href={order.invoice.hosted_invoice_url} target="_blank" rel="noopener noreferrer">
                 Unduh Invoice
               </Link>
-            </Button>
-          </div>
-        )}
-
-        {/* Tombol Bayar Sekarang untuk pesanan pending */}
-        {order.status === "pending" && order.snapToken && (
-          <div className="mt-4">
-            <Button onClick={handlePay} className="bg-shop_dark_green hover:bg-shop_dark_green/90 text-white" size="sm">
-                Bayar Sekarang
             </Button>
           </div>
         )}

@@ -827,14 +827,14 @@
         },
         "optional": true
       },
-      "midtransTransactionId": {
+      "xenditTransactionId": {
         "type": "objectAttribute",
         "value": {
           "type": "string"
         },
         "optional": true
       },
-      "midtransStatus": {
+      "xenditStatus": {
         "type": "objectAttribute",
         "value": {
           "type": "union",
