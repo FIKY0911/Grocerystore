@@ -19,19 +19,17 @@ const Logo: React.FC<LogoProps> = ({
   src = defaultLogo, // Use defaultLogo if src is not provided
 }) => {
   return (
-    <div className={`flex items-center ${className || ""}`}>
-      <Link href="/" className="flex items-center">
-        <div className="relative" style={{ width: `${width}px`, height: `${height}px` }}>
-          <Image
-            src={src}
-            alt={alt}
-            fill // Use fill instead of fixed width/height for better responsiveness
-            className="object-contain"
-            priority
-          />
-        </div>
-      </Link>
-    </div>
+    <Link href="/" className={`flex items-center ${className || ""}`}>
+      <div className="relative flex-shrink-0" style={{ width: `${width}px`, height: `${height}px` }}>
+        <Image
+          src={src}
+          alt={alt}
+          fill
+          className="object-contain"
+          priority
+        />
+      </div>
+    </Link>
   );
 };
 

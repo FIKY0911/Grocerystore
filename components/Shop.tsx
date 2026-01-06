@@ -4,13 +4,13 @@ import React, { useEffect, useState } from "react";
 import Container from "./Container";
 import { useSearchParams } from "next/navigation";
 import { client } from "@/sanity/lib/client";
-import { Loader2 } from "lucide-react";
 import NoProductAvailable from "./NoProductAvailable";
 import ProductCard from "./ProductCard";
 import { Title } from "./text";
 import CategoryList from "./shop/CategoryList";
 import BrandList from "./shop/BrandList";
 import PriceList from "./shop/PriceList";
+import { Skeleton } from "./ui/skeleton";
 
 interface Props {
   categories: Category[];
@@ -109,11 +109,35 @@ const Shop = ({ categories, brands }: Props) => {
           <div className="flex-1 pt-5">
             <div className="h-[calc(100vh-160px)] overflow-y-auto pr-2 scrollbar-hide">
               {loading ? (
-                <div className="p-20 flex flex-col gap-2 items-center justify-center bg-white">
-                  <Loader2 className="w-10 h-10 text-shop_dark_green animate-spin" />
-                  <p className="font-semibold tracking-wide text-base">
-                    Product is loading . . .
-                  </p>
+                <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-2.5">
+                  {[...Array(12)].map((_, i) => (
+                    <div
+                      key={i}
+                      className="text-sm border-[1px] rounded-md border-darkBlue/20 bg-white"
+                    >
+                      <div className="relative bg-shop_light_bg p-4">
+                        <Skeleton className="w-full h-64 rounded-md" />
+                      </div>
+                      <div className="p-3 flex flex-col gap-2">
+                        <Skeleton className="h-3 w-20" />
+                        <Skeleton className="h-4 w-full" />
+                        <div className="flex items-center gap-2">
+                          <div className="flex gap-1">
+                            {[...Array(5)].map((_, j) => (
+                              <Skeleton key={j} className="h-4 w-4 rounded-full" />
+                            ))}
+                          </div>
+                          <Skeleton className="h-3 w-16" />
+                        </div>
+                        <div className="flex items-center gap-2">
+                          <Skeleton className="h-4 w-10" />
+                          <Skeleton className="h-4 w-8" />
+                        </div>
+                        <Skeleton className="h-5 w-24" />
+                        <Skeleton className="h-9 w-36 rounded-full" />
+                      </div>
+                    </div>
+                  ))}
                 </div>
               ) : products?.length > 0 ? (
                 <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-2.5">

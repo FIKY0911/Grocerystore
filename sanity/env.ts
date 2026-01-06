@@ -11,9 +11,10 @@ export const projectId = assertValue(
   'Missing environment variable: NEXT_PUBLIC_SANITY_PROJECT_ID'
 )
 
+// Use SANITY_WRITE_READ_TOKEN instead of NEXT_PUBLIC_SANITY_WRITE_TOKEN
 export const token = assertValue(
-  process.env.NEXT_PUBLIC_SANITY_WRITE_TOKEN,
-  'Missing environment variable: NEXT_PUBLIC_SANITY_WRITE_TOKEN'
+  process.env.SANITY_WRITE_READ_TOKEN || process.env.NEXT_PUBLIC_SANITY_WRITE_TOKEN,
+  'Missing environment variable: SANITY_WRITE_READ_TOKEN or NEXT_PUBLIC_SANITY_WRITE_TOKEN'
 )
 
 function assertValue<T>(v: T | undefined, errorMessage: string): T {

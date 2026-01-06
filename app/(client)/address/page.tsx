@@ -65,13 +65,14 @@ export default function AddAddressPage() {
         email: user?.emailAddresses[0]?.emailAddress || "",
         address: formData.address.trim(),
         city: formData.city.trim(),
-        state: formData.state, // tidak perlu .toUpperCase()
+        state: formData.state,
         shipper: {
           _type: "reference",
           _ref: formData.shipper,
         },
         zip: formData.zip.trim(),
         default: formData.default,
+        archived: false,
         createdAt: new Date().toISOString(),
       };
 
@@ -189,7 +190,7 @@ export default function AddAddressPage() {
             </div>
 
             <div className="flex gap-3 pt-4">
-              <Button type="submit" disabled={loading}>
+              <Button type="submit" disabled={loading} className="bg-shop_dark_green hover:bg-shop_dark_green/90 text-white">
                 {loading ? "Menyimpan..." : "Simpan Alamat"}
               </Button>
               <Button type="button" variant="outline" onClick={() => router.back()}>

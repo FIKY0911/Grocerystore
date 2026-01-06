@@ -187,6 +187,68 @@ const OTHERS_BLOG_QUERY = defineQuery(`*[
   }
 }`);
 
+// User queries
+const ALL_USERS_QUERY = defineQuery(`*[_type == "user"] | order(createdAt desc) {
+  _id,
+  clerkUserId,
+  email,
+  firstName,
+  lastName,
+  fullName,
+  imageUrl,
+  phone,
+  createdAt,
+  updatedAt,
+  lastSignInAt,
+  isActive,
+  totalOrders,
+  "ordersCount": count(*[_type == "order" && clerkUserId == ^.clerkUserId])
+}`);
+
+const USER_BY_CLERK_ID_QUERY = defineQuery(`*[_type == "user" && clerkUserId == $clerkUserId][0] {
+  _id,
+  clerkUserId,
+  email,
+  firstName,
+  lastName,
+  fullName,
+  imageUrl,
+  phone,
+  createdAt,
+  updatedAt,
+  lastSignInAt,
+  isActive,
+  totalOrders,
+  "ordersCount": count(*[_type == "order" && clerkUserId == ^.clerkUserId]),
+  "orders": *[_type == "order" && clerkUserId == ^.clerkUserId] | order(orderDate desc) {
+    _id,
+    orderNumber,
+    orderDate,
+    totalPrice,
+    status
+  }
+}`);
+
+// Search products query
+const SEARCH_PRODUCTS_QUERY = defineQuery(`*[
+  _type == "product" 
+  && (
+    name match $searchTerm + "*"
+    || description match $searchTerm + "*"
+  )
+] | order(name asc) [0...20] {
+  _id,
+  name,
+  "slug": slug.current,
+  images,
+  description,
+  price,
+  discount,
+  stock,
+  status,
+  variant
+}`);
+
 export {
   BRANDS_QUERY,
   LATEST_BLOG_QUERY,
@@ -195,9 +257,12 @@ export {
   BRAND_QUERY,
   MY_ORDERS_QUERY,
   ORDER_BY_ID_QUERY,
-  INVOICE_QUERY, // 🆕 Export query invoice
+  INVOICE_QUERY,
   GET_ALL_BLOG,
   SINGLE_BLOG_QUERY,
   BLOG_CATEGORIES,
   OTHERS_BLOG_QUERY,
+  ALL_USERS_QUERY,
+  USER_BY_CLERK_ID_QUERY,
+  SEARCH_PRODUCTS_QUERY,
 };

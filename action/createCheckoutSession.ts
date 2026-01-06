@@ -10,6 +10,7 @@ import {
   formatPhoneForXendit,
   validateXenditAmount 
 } from '@/lib/xendit';
+import { incrementUserOrderCount } from '@/lib/updateUserOrderCount';
 
 interface CartProduct {
   _id: string;
@@ -348,6 +349,9 @@ export async function createCheckoutSession(
         console.log('✅ Order saved to Sanity successfully');
         console.log('📝 Saved order ID:', savedOrder._id);
         console.log('🛒 Products saved:', orderData.products.length);
+
+        // Update user's total order count
+        await incrementUserOrderCount(metadata.clerkUserId);
       } catch (sanityError: any) {
         console.error('⚠️ Failed to save order to Sanity:', sanityError?.message || sanityError);
         console.error('📋 Full error:', JSON.stringify(sanityError, null, 2));

@@ -53,11 +53,10 @@ const Footer = () => {
                     </div>
                 </div>
                 <div className="py-3 border-t text-center text-sm text-gray-600">
-                    <div className="flex items-center justify-center gap-2">
-                        <span>© {new Date().getFullYear()}</span>
-                        <Logo width={30} height={45} alt="Logo" className="inline-block align-middle" /> {/* Added inline-block and align-middle */} {/* Added width and height */}
+                    <p className="flex items-center justify-center gap-2 flex-wrap">
+                        <span>© {new Date().getFullYear()} 🛒 GroceryStore.</span>
                         <span>All rights reserved.</span>
-                    </div>
+                    </p>
                 </div>
             </Container>
         </footer>

@@ -13,6 +13,7 @@ import {
   ORDER_BY_ID_QUERY,
   OTHERS_BLOG_QUERY,
   PRODUCT_BY_SLUG_QUERY,
+  SEARCH_PRODUCTS_QUERY,
   SINGLE_BLOG_QUERY,
 } from "./query";
 
@@ -177,6 +178,19 @@ const getOthersBlog = async (slug: string, quantity: number) => {
   }
 };
 
+const searchProducts = async (searchTerm: string) => {
+  try {
+    const { data } = await sanityFetch({
+      query: SEARCH_PRODUCTS_QUERY,
+      params: { searchTerm },
+    });
+    return data ?? [];
+  } catch (error) {
+    console.log("Error searching products:", error);
+    return [];
+  }
+};
+
 // 🔽 Jangan lupa export fungsi barunya!
 export {
   getCategories,
@@ -191,4 +205,5 @@ export {
   getBlogCategories,
   getOthersBlog,
   getOrderById, // ✅ ini yang baru
+  searchProducts,
 };

@@ -21,10 +21,11 @@ import {
 } from "@/components/ui/tooltip";
 import { Address } from "@/sanity.types";
 import { client } from "@/sanity/lib/client";
+import { writeClient } from "@/sanity/lib/writeClient";
 import { urlFor } from "@/sanity/lib/image";
 import useStore from "@/store";
 import { useAuth, useUser } from "@clerk/nextjs";
-import { ShoppingBag, Trash } from "lucide-react";
+import { ShoppingBag, Trash, Edit, Plus, Trash2 } from "lucide-react";
 import Image from "next/image";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
@@ -41,6 +42,7 @@ const CartPage = () => {
     resetCart,
   } = useStore();
   const [loading, setLoading] = useState(false);
+  const [initialLoading, setInitialLoading] = useState(true);
   const groupedItems = useStore((state) => state.getGroupedItems());
   const { isSignedIn } = useAuth();
   const { user } = useUser();
@@ -64,28 +66,62 @@ const CartPage = () => {
   };
 
   const fetchAddresses = async () => {
-    setLoading(true);
     try {
-      const query = `*[_type=="address"] | order(publishedAt desc)`;
+      const query = `*[_type=="address" && (archived != true || !defined(archived))] | order(default desc, createdAt desc)`;
       const data = await client.fetch(query);
       setAddresses(data);
-      const defaultAddress = data.find((addr: Address) => addr.default);
-      if (defaultAddress) {
-        setSelectedAddress(defaultAddress);
-      } else if (data.length > 0) {
-        setSelectedAddress(data[0]);
+      
+      // Jika ada selected address, cek apakah masih ada di data baru
+      if (selectedAddress) {
+        const stillExists = data.find((addr: Address) => addr._id === selectedAddress._id);
+        if (stillExists) {
+          // Update dengan data terbaru
+          setSelectedAddress(stillExists);
+        } else {
+          // Jika dihapus, pilih default atau yang pertama
+          const defaultAddress = data.find((addr: Address) => addr.default);
+          setSelectedAddress(defaultAddress || data[0] || null);
+        }
+      } else {
+        // Jika belum ada selected, pilih default atau yang pertama
+        const defaultAddress = data.find((addr: Address) => addr.default);
+        if (defaultAddress) {
+          setSelectedAddress(defaultAddress);
+        } else if (data.length > 0) {
+          setSelectedAddress(data[0]);
+        }
       }
     } catch (error) {
       console.error("Addresses fetching error:", error);
-      toast.error("Gagal mengambil data alamat.");
+      // Jangan tampilkan toast error saat auto-refresh
+      if (!addresses) {
+        toast.error("Gagal mengambil data alamat.");
+      }
     } finally {
-      setLoading(false);
+      setInitialLoading(false);
     }
   };
 
   useEffect(() => {
     fetchAddresses();
     fetchShippers();
+
+    // Setup polling untuk auto-refresh addresses setiap 5 detik
+    const addressInterval = setInterval(() => {
+      fetchAddresses();
+    }, 5000);
+
+    // Refresh saat window focus (user kembali ke tab)
+    const handleFocus = () => {
+      fetchAddresses();
+    };
+    window.addEventListener('focus', handleFocus);
+
+    // Cleanup interval dan event listener saat component unmount
+    return () => {
+      clearInterval(addressInterval);
+      window.removeEventListener('focus', handleFocus);
+    };
   }, []);
 
   const handleResetCart = () => {
@@ -93,6 +129,49 @@ const CartPage = () => {
     if (confirmed) {
       resetCart();
       toast.success("Keranjang berhasil direset!");
+    }
+  };
+
+  const handleDeleteAddress = async (addressId: string) => {
+    try {
+      // Cek apakah address digunakan di order
+      const ordersUsingAddress = await client.fetch(
+        `*[_type == "order" && references($addressId)]`,
+        { addressId }
+      );
+
+      if (ordersUsingAddress.length > 0) {
+        const shouldDisable = window.confirm(
+          `Alamat ini digunakan di ${ordersUsingAddress.length} pesanan.\n\nNonaktifkan alamat ini? (Data pesanan tetap aman)`
+        );
+        
+        if (shouldDisable) {
+          await writeClient
+            .patch(addressId)
+            .set({ 
+              archived: true,
+              default: false 
+            })
+            .commit();
+          
+          toast.success("Alamat berhasil dinonaktifkan");
+          fetchAddresses();
+        }
+        return;
+      }
+
+      const confirmDelete = window.confirm(
+        "Yakin ingin menghapus alamat ini?"
+      );
+      
+      if (!confirmDelete) return;
+
+      await writeClient.delete(addressId);
+      toast.success("Alamat berhasil dihapus");
+      fetchAddresses();
+    } catch (error: any) {
+      console.error("Error deleting address:", error);
+      toast.error("Gagal menghapus alamat");
     }
   };
 
@@ -174,9 +253,9 @@ const CartPage = () => {
   };
 
   return (
-    <div className="bg-gray-50 pb-52 md:pb-10">
+    <div className="min-h-screen bg-gray-50 pb-10">
       {isSignedIn ? (
-        <Container>
+        <Container className="pb-32 md:pb-0">
           {groupedItems?.length ? (
             <>
               <div className="flex items-center gap-2 py-5">
@@ -305,7 +384,7 @@ const CartPage = () => {
                           />
                         </div>
                         <Button
-                          className="w-full rounded-full font-semibold tracking-wide hoverEffect"
+                          className="w-full rounded-full font-semibold tracking-wide hoverEffect bg-[#00c600] hover:bg-[#00a800] text-white"
                           size="lg"
                           disabled={loading}
                           onClick={handleCheckout}
@@ -317,8 +396,13 @@ const CartPage = () => {
                     {addresses && (
                       <div className="bg-white rounded-md mt-5">
                         <Card>
-                          <CardHeader>
+                          <CardHeader className="flex flex-row items-center justify-between">
                             <CardTitle>Alamat Pengiriman</CardTitle>
+                            {!initialLoading && (
+                              <span className="text-xs text-gray-400">
+                                Auto-refresh aktif
+                              </span>
+                            )}
                           </CardHeader>
                           <CardContent>
                             <RadioGroup
@@ -335,31 +419,72 @@ const CartPage = () => {
                               {addresses?.map((address) => (
                                 <div
                                   key={address?._id}
-                                  className={`flex items-center space-x-2 mb-4 cursor-pointer ${selectedAddress?._id === address?._id && "text-shop_dark_green"}`}
+                                  className={`flex items-start space-x-2 mb-4 p-3 rounded-lg border ${
+                                    selectedAddress?._id === address?._id 
+                                      ? "border-shop_dark_green bg-shop_light_green/5" 
+                                      : "border-gray-200"
+                                  }`}
                                 >
                                   <RadioGroupItem
                                     value={address?._id.toString()}
+                                    className="mt-1"
                                   />
-                                  <Label
-                                    htmlFor={`address-${address?._id}`}
-                                    className="grid gap-1.5 flex-1 cursor-pointer"
-                                  >
-                                    <span className="font-semibold">
-                                      {address?.name}
-                                    </span>
-                                    <span className="text-sm text-black/60">
-                                      {address.address}, {address.city},{" "}
-                                      {address.state} {address.zip}
-                                    </span>
-                                  </Label>
+                                  <div className="flex-1">
+                                    <Label
+                                      htmlFor={`address-${address?._id}`}
+                                      className="grid gap-1.5 cursor-pointer"
+                                    >
+                                      <span className="font-semibold">
+                                        {address?.name}
+                                      </span>
+                                      <span className="text-sm text-black/60">
+                                        {address.address}, {address.city},{" "}
+                                        {address.state} {address.zip}
+                                      </span>
+                                    </Label>
+                                  </div>
+                                  <div className="flex gap-1">
+                                    <TooltipProvider>
+                                      <Tooltip>
+                                        <TooltipTrigger asChild>
+                                          <Button
+                                            variant="ghost"
+                                            size="sm"
+                                            onClick={() => router.push(`/address/edit/${address._id}`)}
+                                            className="h-8 w-8 p-0"
+                                          >
+                                            <Edit className="h-4 w-4" />
+                                          </Button>
+                                        </TooltipTrigger>
+                                        <TooltipContent>Edit alamat</TooltipContent>
+                                      </Tooltip>
+
+                                      <Tooltip>
+                                        <TooltipTrigger asChild>
+                                          <Button
+                                            variant="ghost"
+                                            size="sm"
+                                            onClick={() => handleDeleteAddress(address._id)}
+                                            className="h-8 w-8 p-0 text-red-600 hover:text-red-700 hover:bg-red-50"
+                                          >
+                                            <Trash2 className="h-4 w-4" />
+                                          </Button>
+                                        </TooltipTrigger>
+                                        <TooltipContent>Hapus alamat</TooltipContent>
+                                      </Tooltip>
+                                    </TooltipProvider>
+                                  </div>
                                 </div>
                               ))}
                             </RadioGroup>
-                            <Link href="/address">
-                              <Button variant="outline" className="w-full mt-4">
-                                Tambah Alamat Baru
-                              </Button>
-                            </Link>
+                            <Button
+                              variant="outline"
+                              className="w-full mt-2"
+                              onClick={() => router.push("/address")}
+                            >
+                              <Plus className="w-4 h-4 mr-2" />
+                              Tambah Alamat Baru
+                            </Button>
                           </CardContent>
                         </Card>
                       </div>
@@ -404,8 +529,8 @@ const CartPage = () => {
                   </div>
                 </div>
                 {/* Order summary for mobile view */}
-                <div className="md:hidden fixed bottom-0 left-0 w-full bg-white pt-2 shadow-lg">
-                  <div className="bg-white p-4 rounded-lg border mx-4 mb-4">
+                <div className="md:hidden fixed bottom-0 left-0 right-0 w-full bg-white shadow-2xl border-t z-50">
+                  <div className="p-4">
                     <h2 className="font-semibold mb-3">Ringkasan Pesanan</h2>
                     <div className="space-y-3">
                       <div className="flex items-center justify-between text-sm">
@@ -427,7 +552,7 @@ const CartPage = () => {
                         />
                       </div>
                       <Button
-                        className="w-full rounded-full font-semibold tracking-wide hoverEffect"
+                        className="w-full rounded-full font-semibold tracking-wide hoverEffect bg-[#00c600] hover:bg-[#00a800] text-white"
                         size="lg"
                         disabled={loading}
                         onClick={handleCheckout}
