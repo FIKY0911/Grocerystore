@@ -4,7 +4,7 @@ import { getSingleBlog, getOthersBlog } from "@/sanity/queries";
 import Image from "next/image";
 import { urlFor } from "@/sanity/lib/image";
 import Link from "next/link";
-import { Calendar, User, ArrowLeft, ArrowRight, Clock, Share2, Facebook, Twitter, Linkedin } from "lucide-react";
+import { Calendar, User, ArrowLeft, ArrowRight, Clock } from "lucide-react";
 import dayjs from "dayjs";
 import "dayjs/locale/id";
 import relativeTime from "dayjs/plugin/relativeTime";
@@ -12,6 +12,8 @@ import { Badge } from "@/components/ui/badge";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { notFound } from "next/navigation";
+import { SINGLE_BLOG_QUERYResult, OTHERS_BLOG_QUERYResult } from "@/sanity.types";
+import ShareButton from "./ShareButton";
 
 dayjs.extend(relativeTime);
 dayjs.locale("id");
@@ -22,10 +24,28 @@ const SingleBlogPage = async ({
   params: Promise<{ slug: string }>;
 }) => {
   const { slug } = await params;
-  const blog = await getSingleBlog(slug);
-  const otherBlogs = await getOthersBlog(slug, 3);
-
-  if (!blog) {
+  
+  let blog: SINGLE_BLOG_QUERYResult | null = null;
+  let otherBlogs: OTHERS_BLOG_QUERYResult = [];
+  
+  try {
+    const fetchedBlog = await getSingleBlog(slug);
+    
+    if (!fetchedBlog || Array.isArray(fetchedBlog)) {
+      return notFound();
+    }
+    
+    blog = fetchedBlog as SINGLE_BLOG_QUERYResult;
+    
+    // Fetch other blogs only if main blog exists
+    try {
+      otherBlogs = await getOthersBlog(slug, 3);
+    } catch (error) {
+      console.error('Error fetching other blogs:', error);
+      otherBlogs = [];
+    }
+  } catch (error) {
+    console.error('Error fetching blog:', error);
     return notFound();
   }
 
@@ -144,28 +164,32 @@ const SingleBlogPage = async ({
         {/* Article Header */}
         <article className="max-w-4xl mx-auto bg-white rounded-2xl shadow-lg p-8 md:p-12">
           {/* Categories */}
-          <div className="flex flex-wrap gap-2 mb-4">
-            {blog?.blogcategories?.map((category, index) => (
-              <Badge key={index} className="bg-shop_dark_green text-white">
-                {category?.title}
-              </Badge>
-            ))}
-          </div>
+          {blog?.blogcategories && blog.blogcategories.length > 0 && (
+            <div className="flex flex-wrap gap-2 mb-4">
+              {blog.blogcategories.map((category, index) => (
+                category?.title && (
+                  <Badge key={index} className="bg-shop_dark_green text-white">
+                    {category.title}
+                  </Badge>
+                )
+              ))}
+            </div>
+          )}
 
           {/* Title */}
           <h1 className="text-4xl md:text-5xl font-bold mb-6 leading-tight text-gray-900">
-            {blog?.title}
+            {blog?.title || "Untitled"}
           </h1>
 
           {/* Meta Info */}
           <div className="flex flex-wrap items-center gap-6 mb-8 pb-6 border-b text-gray-600">
-            {blog?.author && (
+            {blog?.author?.name && (
               <div className="flex items-center gap-3">
                 {blog?.author?.image && (
                   <div className="relative w-12 h-12 rounded-full overflow-hidden ring-2 ring-shop_light_green">
                     <Image
-                      src={urlFor(blog?.author?.image).url()}
-                      alt={blog?.author?.name || "Author"}
+                      src={urlFor(blog.author.image).url()}
+                      alt={blog.author.name || "Author"}
                       fill
                       className="object-cover"
                     />
@@ -175,15 +199,17 @@ const SingleBlogPage = async ({
                   <div className="flex items-center gap-1 text-sm">
                     <User size={14} />
                     <span className="font-semibold text-gray-900">
-                      {blog?.author?.name}
+                      {blog.author.name}
                     </span>
                   </div>
-                  <div className="flex items-center gap-1 text-xs text-gray-500">
-                    <Calendar size={12} />
-                    <span>
-                      {dayjs(blog?.publishedAt).format("D MMMM YYYY")}
-                    </span>
-                  </div>
+                  {blog?.publishedAt && (
+                    <div className="flex items-center gap-1 text-xs text-gray-500">
+                      <Calendar size={12} />
+                      <span>
+                        {dayjs(blog.publishedAt).format("D MMMM YYYY")}
+                      </span>
+                    </div>
+                  )}
                 </div>
               </div>
             )}
@@ -223,35 +249,21 @@ const SingleBlogPage = async ({
                 </p>
               </div>
               <div className="flex gap-2">
-                <Button
-                  size="sm"
-                  onClick={() => {
-                    if (navigator.share) {
-                      navigator.share({
-                        title: blog?.title || '',
-                        url: window.location.href,
-                      });
-                    }
-                  }}
-                  className="gap-2 bg-shop_dark_green text-white hover:bg-shop_dark_green/90"
-                >
-                  <Share2 size={16} />
-                  Bagikan
-                </Button>
+                <ShareButton title={blog?.title || ''} />
               </div>
             </div>
           </div>
 
           {/* Author Bio */}
-          {blog?.author && (
+          {blog?.author?.name && (
             <div className="mt-8 p-6 bg-gray-50 rounded-lg">
               <h3 className="font-semibold text-lg mb-4">Tentang Penulis</h3>
               <div className="flex gap-4">
                 {blog?.author?.image && (
                   <div className="relative w-16 h-16 rounded-full overflow-hidden flex-shrink-0">
                     <Image
-                      src={urlFor(blog?.author?.image).url()}
-                      alt={blog?.author?.name || "Author"}
+                      src={urlFor(blog.author.image).url()}
+                      alt={blog.author.name || "Author"}
                       fill
                       className="object-cover"
                     />
@@ -259,13 +271,9 @@ const SingleBlogPage = async ({
                 )}
                 <div>
                   <h4 className="font-semibold text-gray-900 mb-1">
-                    {blog?.author?.name}
+                    {blog.author.name}
                   </h4>
-                  {blog?.author?.bio && blog?.author?.bio[0]?.children?.[0]?.text && (
-                    <p className="text-sm text-gray-600">
-                      {blog?.author?.bio[0]?.children?.[0]?.text}
-                    </p>
-                  )}
+                  {/* Bio removed as it's not in the query */}
                 </div>
               </div>
             </div>
@@ -279,46 +287,48 @@ const SingleBlogPage = async ({
               Artikel Lainnya
             </h2>
             <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-              {otherBlogs.map((relatedBlog) => (
-                <Card
-                  key={relatedBlog?.slug?.current}
-                  className="overflow-hidden hover:shadow-xl transition-all duration-300 group bg-white"
-                >
-                  {relatedBlog?.mainImage && (
-                    <Link
-                      href={`/blog/${relatedBlog?.slug?.current}`}
-                      className="relative h-48 block overflow-hidden"
-                    >
-                      <Image
-                        src={urlFor(relatedBlog?.mainImage).url()}
-                        alt={relatedBlog?.title || "Blog image"}
-                        fill
-                        className="object-cover group-hover:scale-110 transition-transform duration-500"
-                      />
-                    </Link>
-                  )}
-                  <CardContent className="p-5">
-                    <div className="flex items-center gap-2 mb-3 text-xs text-gray-600">
-                      <Calendar size={12} />
-                      <span>
-                        {dayjs(relatedBlog?.publishedAt).format("D MMM YYYY")}
-                      </span>
-                    </div>
-                    <Link href={`/blog/${relatedBlog?.slug?.current}`}>
-                      <h3 className="text-lg font-bold mb-2 line-clamp-2 hover:text-shop_dark_green transition-colors">
-                        {relatedBlog?.title}
-                      </h3>
-                    </Link>
-                    <Link
-                      href={`/blog/${relatedBlog?.slug?.current}`}
-                      className="inline-flex items-center gap-2 text-sm text-shop_dark_green font-semibold hover:gap-3 transition-all mt-2"
-                    >
-                      Baca Artikel
-                      <ArrowRight size={14} />
-                    </Link>
-                  </CardContent>
-                </Card>
-              ))}
+              {otherBlogs.map((relatedBlog) => {
+                if (!relatedBlog?.slug?.current) return null;
+                
+                return (
+                  <Card
+                    key={relatedBlog.slug.current}
+                    className="overflow-hidden hover:shadow-xl transition-all duration-300 group bg-white"
+                  >
+                    {relatedBlog?.mainImage && (
+                      <Link
+                        href={`/blog/${relatedBlog.slug.current}`}
+                        className="relative h-48 block overflow-hidden"
+                      >
+                        <Image
+                          src={urlFor(relatedBlog.mainImage).url()}
+                          alt={relatedBlog?.title || "Blog image"}
+                          fill
+                          className="object-cover group-hover:scale-110 transition-transform duration-500"
+                        />
+                      </Link>
+                    )}
+                    <CardContent className="p-5">
+                      <div className="flex items-center gap-2 mb-3 text-xs text-gray-600">
+                        <Calendar size={12} />
+                        <span>Baca Artikel</span>
+                      </div>
+                      <Link href={`/blog/${relatedBlog.slug.current}`}>
+                        <h3 className="text-lg font-bold mb-2 line-clamp-2 hover:text-shop_dark_green transition-colors">
+                          {relatedBlog?.title || "Untitled"}
+                        </h3>
+                      </Link>
+                      <Link
+                        href={`/blog/${relatedBlog.slug.current}`}
+                        className="inline-flex items-center gap-2 text-sm text-shop_dark_green font-semibold hover:gap-3 transition-all mt-2"
+                      >
+                        Baca Artikel
+                        <ArrowRight size={14} />
+                      </Link>
+                    </CardContent>
+                  </Card>
+                );
+              })}
             </div>
           </div>
         )}

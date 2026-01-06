@@ -5,16 +5,24 @@ import { getAllBlogs } from "@/sanity/queries";
 import Image from "next/image";
 import { urlFor } from "@/sanity/lib/image";
 import Link from "next/link";
-import { Calendar, Clock, ArrowRight } from "lucide-react";
+import { Calendar, ArrowRight } from "lucide-react";
 import dayjs from "dayjs";
 import "dayjs/locale/id";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent } from "@/components/ui/card";
+import { GET_ALL_BLOGResult } from "@/sanity.types";
 
 dayjs.locale("id");
 
 const BlogPage = async () => {
-  const blogs = await getAllBlogs(50); // Get 50 latest blogs
+  let blogs: GET_ALL_BLOGResult = [];
+  
+  try {
+    blogs = await getAllBlogs(50); // Get 50 latest blogs
+  } catch (error) {
+    console.error('Error loading blogs:', error);
+    blogs = [];
+  }
 
   return (
     <div className="py-10">
@@ -29,7 +37,7 @@ const BlogPage = async () => {
         </div>
 
         {/* Featured Blog (First Blog) */}
-        {blogs && blogs.length > 0 && (
+        {blogs && blogs.length > 0 && blogs[0] && (
           <div className="mb-12">
             <Card className="overflow-hidden hover:shadow-xl transition-shadow duration-300">
               <div className="grid md:grid-cols-2 gap-0">
@@ -57,22 +65,25 @@ const BlogPage = async () => {
                 <CardContent className="p-8 flex flex-col justify-center">
                   <div className="flex items-center gap-4 mb-4 text-sm text-gray-600">
                     {blogs[0]?.blogcategories &&
-                      blogs[0]?.blogcategories.length > 0 && (
+                      blogs[0]?.blogcategories.length > 0 &&
+                      blogs[0]?.blogcategories[0]?.title && (
                         <Badge variant="outline" className="text-shop_dark_green border-shop_dark_green">
                           {blogs[0]?.blogcategories[0]?.title}
                         </Badge>
                       )}
-                    <div className="flex items-center gap-1">
-                      <Calendar size={14} />
-                      <span>
-                        {dayjs(blogs[0]?.publishedAt).format("D MMMM YYYY")}
-                      </span>
-                    </div>
+                    {blogs[0]?.publishedAt && (
+                      <div className="flex items-center gap-1">
+                        <Calendar size={14} />
+                        <span>
+                          {dayjs(blogs[0]?.publishedAt).format("D MMMM YYYY")}
+                        </span>
+                      </div>
+                    )}
                   </div>
 
                   <Link href={`/blog/${blogs[0]?.slug?.current}`}>
                     <h2 className="text-3xl font-bold mb-4 hover:text-shop_dark_green transition-colors line-clamp-2">
-                      {blogs[0]?.title}
+                      {blogs[0]?.title || "Untitled"}
                     </h2>
                   </Link>
 
@@ -98,72 +109,80 @@ const BlogPage = async () => {
 
         {/* Blog Grid */}
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-          {blogs?.slice(1).map((blog) => (
-            <Card
-              key={blog?._id}
-              className="overflow-hidden hover:shadow-xl transition-all duration-300 group"
-            >
-              {/* Image */}
-              {blog?.mainImage && (
-                <Link
-                  href={`/blog/${blog?.slug?.current}`}
-                  className="relative h-48 block overflow-hidden"
-                >
-                  <Image
-                    src={urlFor(blog?.mainImage).url()}
-                    alt={blog?.title || "Blog image"}
-                    fill
-                    className="object-cover group-hover:scale-110 transition-transform duration-500"
-                  />
-                </Link>
-              )}
+          {blogs?.slice(1).map((blog) => {
+            if (!blog || !blog.slug?.current) return null;
+            
+            return (
+              <Card
+                key={blog?._id}
+                className="overflow-hidden hover:shadow-xl transition-all duration-300 group"
+              >
+                {/* Image */}
+                {blog?.mainImage && (
+                  <Link
+                    href={`/blog/${blog?.slug?.current}`}
+                    className="relative h-48 block overflow-hidden"
+                  >
+                    <Image
+                      src={urlFor(blog?.mainImage).url()}
+                      alt={blog?.title || "Blog image"}
+                      fill
+                      className="object-cover group-hover:scale-110 transition-transform duration-500"
+                    />
+                  </Link>
+                )}
 
-              {/* Content */}
-              <CardContent className="p-5">
-                {/* Meta */}
-                <div className="flex items-center gap-3 mb-3 text-xs text-gray-600">
-                  {blog?.blogcategories && blog?.blogcategories.length > 0 && (
-                    <Badge
-                      variant="outline"
-                      className="text-shop_dark_green border-shop_dark_green"
-                    >
-                      {blog?.blogcategories[0]?.title}
-                    </Badge>
-                  )}
-                  <div className="flex items-center gap-1">
-                    <Calendar size={12} />
-                    <span>
-                      {dayjs(blog?.publishedAt).format("D MMM YYYY")}
-                    </span>
+                {/* Content */}
+                <CardContent className="p-5">
+                  {/* Meta */}
+                  <div className="flex items-center gap-3 mb-3 text-xs text-gray-600">
+                    {blog?.blogcategories && 
+                     blog?.blogcategories.length > 0 && 
+                     blog?.blogcategories[0]?.title && (
+                      <Badge
+                        variant="outline"
+                        className="text-shop_dark_green border-shop_dark_green"
+                      >
+                        {blog?.blogcategories[0]?.title}
+                      </Badge>
+                    )}
+                    {blog?.publishedAt && (
+                      <div className="flex items-center gap-1">
+                        <Calendar size={12} />
+                        <span>
+                          {dayjs(blog?.publishedAt).format("D MMM YYYY")}
+                        </span>
+                      </div>
+                    )}
                   </div>
-                </div>
 
-                {/* Title */}
-                <Link href={`/blog/${blog?.slug?.current}`}>
-                  <h3 className="text-lg font-bold mb-2 line-clamp-2 hover:text-shop_dark_green transition-colors">
-                    {blog?.title}
-                  </h3>
-                </Link>
+                  {/* Title */}
+                  <Link href={`/blog/${blog?.slug?.current}`}>
+                    <h3 className="text-lg font-bold mb-2 line-clamp-2 hover:text-shop_dark_green transition-colors">
+                      {blog?.title || "Untitled"}
+                    </h3>
+                  </Link>
 
-                {/* Excerpt */}
-                <p className="text-sm text-gray-600 mb-4 line-clamp-2">
-                  {blog?.body?.[0]?._type === "block" &&
-                  blog?.body?.[0]?.children?.[0]?.text
-                    ? blog?.body?.[0]?.children?.[0]?.text
-                    : "Baca artikel lengkap..."}
-                </p>
+                  {/* Excerpt */}
+                  <p className="text-sm text-gray-600 mb-4 line-clamp-2">
+                    {blog?.body?.[0]?._type === "block" &&
+                    blog?.body?.[0]?.children?.[0]?.text
+                      ? blog?.body?.[0]?.children?.[0]?.text
+                      : "Baca artikel lengkap..."}
+                  </p>
 
-                {/* Read More */}
-                <Link
-                  href={`/blog/${blog?.slug?.current}`}
-                  className="inline-flex items-center gap-2 text-sm text-shop_dark_green font-semibold hover:gap-3 transition-all"
-                >
-                  Baca Artikel
-                  <ArrowRight size={14} />
-                </Link>
-              </CardContent>
-            </Card>
-          ))}
+                  {/* Read More */}
+                  <Link
+                    href={`/blog/${blog?.slug?.current}`}
+                    className="inline-flex items-center gap-2 text-sm text-shop_dark_green font-semibold hover:gap-3 transition-all"
+                  >
+                    Baca Artikel
+                    <ArrowRight size={14} />
+                  </Link>
+                </CardContent>
+              </Card>
+            );
+          })}
         </div>
 
         {/* Empty State */}
