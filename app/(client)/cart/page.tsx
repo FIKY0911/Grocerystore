@@ -220,9 +220,49 @@ const CartPage = () => {
       })));
       console.log('📦 Creating order:', orderNumber);
 
+      // Validasi cart items sebelum dikirim
+      const validatedItems = groupedItems.map(item => {
+        if (!item.product._id) {
+          throw new Error(`Product ID missing for ${item.product.name}`);
+        }
+        if (!item.product.name) {
+          throw new Error(`Product name missing for ID ${item.product._id}`);
+        }
+        if (typeof item.product.price !== 'number') {
+          throw new Error(`Invalid price for ${item.product.name}`);
+        }
+        if (typeof item.quantity !== 'number' || item.quantity < 1) {
+          throw new Error(`Invalid quantity for ${item.product.name}`);
+        }
+        
+        return {
+          product: {
+            _id: item.product._id,
+            name: item.product.name,
+            price: item.product.price,
+            category: item.product.variant || 'Uncategorized',
+            url: item.product.slug?.current 
+              ? `${window.location.origin}/product/${item.product.slug.current}`
+              : undefined
+          },
+          quantity: item.quantity
+        };
+      });
+
+      console.log('✅ Validated items:', validatedItems);
+      console.log('📍 Address:', {
+        id: selectedAddress._id,
+        name: selectedAddress.name,
+        city: selectedAddress.city
+      });
+      console.log('🚚 Shipper:', {
+        id: selectedShipper._id,
+        name: selectedShipper.name
+      });
+
       // Panggil server action untuk create invoice
       const { orderNumber: returnedOrderNumber, paymentUrl } = await createCheckoutSession(
-        groupedItems,
+        validatedItems,
         metadata
       );
 
@@ -246,7 +286,19 @@ const CartPage = () => {
       }
     } catch (error: any) {
       console.error("Checkout error:", error);
-      toast.error(error.message || "Gagal memulai pembayaran.");
+      
+      // Show user-friendly error message
+      if (error.message.includes('Product ID missing') || 
+          error.message.includes('Invalid price') ||
+          error.message.includes('Invalid quantity')) {
+        toast.error(`Data produk tidak valid: ${error.message}`);
+      } else if (error.message.includes('Alamat')) {
+        toast.error(error.message);
+      } else if (error.message.includes('pengiriman')) {
+        toast.error(error.message);
+      } else {
+        toast.error(error.message || "Gagal memulai pembayaran.");
+      }
     } finally {
       setLoading(false);
     }
@@ -342,7 +394,7 @@ const CartPage = () => {
                               amount={(product?.price as number) * itemCount}
                               className="font-bold text-lg"
                             />
-                            <QuantityButtons product={product} quantity={quantity} />
+                            <QuantityButtons product={product} />
                           </div>
                         </div>
                       );

@@ -227,13 +227,22 @@ export async function createCheckoutSession(
     }
 
     // Prepare products data dari cart
-    const productsData = groupedItems.map((item) => ({
-      _key: `product-${item.product._id}-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
-      _type: 'object',
-      product: { _type: 'reference', _ref: item.product._id },
-      quantity: item.quantity,
-      priceAtPurchase: item.product.price,
-    }));
+    const productsData = groupedItems.map((item) => {
+      console.log('🔍 Processing item:', {
+        productId: item.product._id,
+        productName: item.product.name,
+        quantity: item.quantity,
+        price: item.product.price
+      });
+      
+      return {
+        _key: `product-${item.product._id}-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
+        _type: 'object',
+        product: { _type: 'reference', _ref: item.product._id },
+        quantity: item.quantity,
+        priceAtPurchase: item.product.price,
+      };
+    });
 
     console.log('🛒 Cart products to save:', {
       count: productsData.length,
@@ -344,6 +353,26 @@ export async function createCheckoutSession(
           shipperRef: orderData.shipper._ref,
         }, null, 2));
         
+        // Validasi products sebelum save
+        if (!orderData.products || orderData.products.length === 0) {
+          throw new Error('Products array is empty');
+        }
+        
+        // Validasi setiap product
+        for (const prod of orderData.products) {
+          if (!prod.product?._ref) {
+            throw new Error(`Invalid product reference: ${JSON.stringify(prod)}`);
+          }
+          if (!prod.quantity || prod.quantity < 1) {
+            throw new Error(`Invalid quantity for product ${prod.product._ref}: ${prod.quantity}`);
+          }
+          if (!prod.priceAtPurchase || prod.priceAtPurchase < 0) {
+            throw new Error(`Invalid price for product ${prod.product._ref}: ${prod.priceAtPurchase}`);
+          }
+        }
+        
+        console.log('✅ Products validation passed');
+        
         const savedOrder = await writeClient.create(orderData);
         
         console.log('✅ Order saved to Sanity successfully');
@@ -355,6 +384,7 @@ export async function createCheckoutSession(
       } catch (sanityError: any) {
         console.error('⚠️ Failed to save order to Sanity:', sanityError?.message || sanityError);
         console.error('📋 Full error:', JSON.stringify(sanityError, null, 2));
+        console.error('📦 Order data that failed:', JSON.stringify(orderData, null, 2));
         console.log('📝 Invoice sudah dibuat di Xendit, tetap return payment URL');
         console.log('💡 Order akan tetap bisa di-track via webhook saat pembayaran berhasil');
         // Tetap return payment URL meskipun gagal save ke Sanity
@@ -366,7 +396,7 @@ export async function createCheckoutSession(
     }
 
     return {
-      orderNumber: metadata.orderNumber,
+      orderNumber: orderNumber,
       paymentUrl: invoice.invoice_url,
     };
   } catch (error: any) {
