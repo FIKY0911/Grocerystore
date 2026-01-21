@@ -29,19 +29,6 @@ To learn more about Next.js, take a look at the following resources:
 
 You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
 
-## Payment Integration (Xendit)
-
-This project uses Xendit for payment processing. To set up Xendit integration:
-
-1. Create a `.env` file in the root directory (atau `.env.local` untuk local overrides)
-2. Add the following environment variables:
-   - `XENDIT_SERVER_KEY` - Your Xendit secret key
-   - `XENDIT_CALLBACK_TOKEN` - Your Xendit webhook callback token
-   - `NEXT_PUBLIC_XENDIT_KEY` - Your Xendit public key (optional)
-   - `NEXT_PUBLIC_SITE_URL` - Your site URL for redirects
-
-See [XENDIT_SETUP.md](./XENDIT_SETUP.md) for detailed setup instructions.
-
 ### Quick Start with Ngrok
 
 Jika Anda sudah menjalankan `ngrok http 3000`, ikuti panduan di [NGROK_WEBHOOK_SETUP.md](./NGROK_WEBHOOK_SETUP.md) untuk mengkonfigurasi webhook.
